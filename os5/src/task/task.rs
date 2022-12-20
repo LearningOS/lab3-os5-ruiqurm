@@ -1,10 +1,11 @@
 //! Types related to task management & Functions for completely changing TCB
 
-use super::TaskContext;
+use super::{TaskContext, current_task};
 use super::{pid_alloc, KernelStack, PidHandle};
-use crate::config::TRAP_CONTEXT;
+use crate::config::{TRAP_CONTEXT, MAX_SYSCALL_NUM};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
+use crate::timer::get_time_us;
 use crate::trap::{trap_handler, TrapContext};
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
@@ -46,6 +47,10 @@ pub struct TaskControlBlockInner {
     pub children: Vec<Arc<TaskControlBlock>>,
     /// It is set when active exit or execution error occurs
     pub exit_code: i32,
+    /// call times of each syscall
+    pub syscall_times: [u32; MAX_SYSCALL_NUM],
+    /// running time
+    pub running_time: usize,
 }
 
 /// Simple access to its internal fields
@@ -103,6 +108,8 @@ impl TaskControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    syscall_times: [0; MAX_SYSCALL_NUM],
+                    running_time: get_time_us() / 1000,
                 })
             },
         };
@@ -170,6 +177,8 @@ impl TaskControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: 0,
+                    syscall_times: [0; MAX_SYSCALL_NUM],
+                    running_time: get_time_us() / 1000,
                 })
             },
         });

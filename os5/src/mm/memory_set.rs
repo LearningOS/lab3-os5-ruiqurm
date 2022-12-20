@@ -252,6 +252,42 @@ impl MemorySet {
         //*self = Self::new_bare();
         self.areas.clear();
     }
+
+    pub fn mmap(&mut self,map_start: VirtAddr,map_end: VirtAddr,permission: MapPermission) ->isize{
+        for area in &mut self.areas{
+            let area_start = VirtAddr::from(area.vpn_range.get_start());
+            let area_end = VirtAddr::from(area.vpn_range.get_end());
+            if !(map_end <= area_start || map_start >= area_end){
+                // overlap memory map area
+                return -1;
+            }
+        }
+        let map_start = VirtAddr::from(map_start.floor().0 * PAGE_SIZE);
+        let map_end = VirtAddr::from(map_end.ceil().0 * PAGE_SIZE);
+        self.insert_framed_area(map_start, map_end, permission);
+        0
+    }
+
+    pub fn munmap(&mut self,map_start: VirtAddr,map_end: VirtAddr) -> isize{
+        for area_index in 0..self.areas.len(){
+            let area = &mut self.areas[area_index];
+            let area_start = VirtAddr::from(area.vpn_range.get_start());
+            let area_end = VirtAddr::from(area.vpn_range.get_end());
+            if map_start == area_start && map_end == area_end{
+                let mut start = map_start.0;
+                let end = map_end.0;
+                loop {
+                    area.unmap_one(&mut self.page_table, VirtPageNum::from(start / PAGE_SIZE));
+                    start += PAGE_SIZE;
+                    if start >= end{
+                        self.areas.remove(area_index);
+                        return 0;
+                    }
+                }
+            }
+        }
+        -1
+    }
 }
 
 /// map area structure, controls a contiguous piece of virtual memory
