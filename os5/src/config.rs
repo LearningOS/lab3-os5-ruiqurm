@@ -7,6 +7,7 @@ pub const PAGE_SIZE_BITS: usize = 0xc;
 pub const MAX_SYSCALL_NUM: usize = 500;
 pub const BIG_STRIDE: usize = usize::MAX;
 pub const DEFAULT_PRIORITY: usize = 16;
+pub const HALF_BIG_STRIDE :usize = BIG_STRIDE / 2;
 
 pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
 pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;

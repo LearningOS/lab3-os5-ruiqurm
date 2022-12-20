@@ -16,6 +16,7 @@ mod processor;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
+mod stride;
 
 use crate::{loader::get_app_data_by_name, config::MAX_SYSCALL_NUM, timer::get_time_us};
 use alloc::sync::Arc;

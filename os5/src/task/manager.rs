@@ -28,21 +28,21 @@ impl TaskManager {
     }
     /// Take a process out of the ready queue
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        // for i in self.ready_queue.iter(){
-        //     print!("{},", i.inner_exclusive_access().pass);
-        // }
-        // println!("");
-        let index = self.ready_queue.iter().enumerate().min_by(|(_,a), (_,b)| {
-            a.inner_exclusive_access().pass.cmp(&b.inner_exclusive_access().pass)
-        }).map(|(index,_)|index);
-        if let Some(idx) = index {
+        if self.ready_queue.is_empty(){
+            None
+        }else{
+            let mut idx = 0;
+            for i in 1..self.ready_queue.len(){
+                if self.ready_queue[i].inner_exclusive_access().pass < self.ready_queue[idx].inner_exclusive_access().pass{
+                    idx = i;
+                }
+            }
             let node = self.ready_queue.remove(idx).unwrap();
             let mut inner = node.inner_exclusive_access();
-            inner.pass += inner.stride;
+            let stride = inner.stride;
+            inner.pass.increase(stride);
             drop(inner);
             Some(node)
-        } else {
-            None
         }
     }
 }
