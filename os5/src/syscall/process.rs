@@ -8,7 +8,7 @@ use crate::task::{
 };
 use crate::timer::get_time_us;
 use alloc::sync::Arc;
-use crate::config::{MAX_SYSCALL_NUM, PAGE_SIZE};
+use crate::config::{MAX_SYSCALL_NUM, PAGE_SIZE, BIG_STRIDE};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -127,8 +127,15 @@ pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
 }
 
 // YOUR JOB: 实现sys_set_priority，为任务添加优先级
-pub fn sys_set_priority(_prio: isize) -> isize {
-    -1
+pub fn sys_set_priority(prio: isize) -> isize {
+    if prio <= 2 || prio as usize >= BIG_STRIDE{
+        return -1 as isize;
+    }else{
+        let task = current_task().unwrap();
+        let mut inner = task.inner_exclusive_access();
+        inner.stride = BIG_STRIDE / prio as usize;
+        prio
+    }
 }
 
 // YOUR JOB: 扩展内核以实现 sys_mmap 和 sys_munmap
@@ -164,11 +171,12 @@ pub fn sys_munmap(start: usize, len: usize) -> isize {
 pub fn sys_spawn(path: *const u8) -> isize {
     let token = current_user_token();
     let path = translated_str(token, path);
-    if let Some(data) = get_app_data_by_name(path.as_str()) {
-        let new_task = Arc::new(TaskControlBlock::new(data));
-        let new_pid = new_task.pid.0;
+    if let Some(elf_data) = get_app_data_by_name(path.as_str()) {
+        let current = current_task().unwrap();
+        let new_task = current.spawn(elf_data);
+        let pid = new_task.pid.0 as isize;
         add_task(new_task);
-        new_pid as isize
+        pid
     }else{
         -1
     }

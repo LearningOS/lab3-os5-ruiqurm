@@ -28,7 +28,22 @@ impl TaskManager {
     }
     /// Take a process out of the ready queue
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        self.ready_queue.pop_front()
+        // for i in self.ready_queue.iter(){
+        //     print!("{},", i.inner_exclusive_access().pass);
+        // }
+        // println!("");
+        let index = self.ready_queue.iter().enumerate().min_by(|(_,a), (_,b)| {
+            a.inner_exclusive_access().pass.cmp(&b.inner_exclusive_access().pass)
+        }).map(|(index,_)|index);
+        if let Some(idx) = index {
+            let node = self.ready_queue.remove(idx).unwrap();
+            let mut inner = node.inner_exclusive_access();
+            inner.pass += inner.stride;
+            drop(inner);
+            Some(node)
+        } else {
+            None
+        }
     }
 }
 

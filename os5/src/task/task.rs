@@ -2,7 +2,7 @@
 
 use super::{TaskContext, current_task};
 use super::{pid_alloc, KernelStack, PidHandle};
-use crate::config::{TRAP_CONTEXT, MAX_SYSCALL_NUM};
+use crate::config::{TRAP_CONTEXT, MAX_SYSCALL_NUM, BIG_STRIDE, DEFAULT_PRIORITY};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::timer::get_time_us;
@@ -51,6 +51,10 @@ pub struct TaskControlBlockInner {
     pub syscall_times: [u32; MAX_SYSCALL_NUM],
     /// running time
     pub running_time: usize,
+    /// stride pass
+    pub pass : usize,
+    /// each step stride
+    pub stride : usize
 }
 
 /// Simple access to its internal fields
@@ -110,6 +114,8 @@ impl TaskControlBlock {
                     exit_code: 0,
                     syscall_times: [0; MAX_SYSCALL_NUM],
                     running_time: get_time_us() / 1000,
+                    pass : 0,
+                    stride : BIG_STRIDE / DEFAULT_PRIORITY
                 })
             },
         };
@@ -179,6 +185,9 @@ impl TaskControlBlock {
                     exit_code: 0,
                     syscall_times: [0; MAX_SYSCALL_NUM],
                     running_time: get_time_us() / 1000,
+                    pass : 0,
+                    // stride : BIG_STRIDE / DEFAULT_PRIORITY
+                    stride : parent_inner.stride
                 })
             },
         });
@@ -193,6 +202,14 @@ impl TaskControlBlock {
         // ---- release parent PCB automatically
         // **** release children PCB automatically
     }
+
+    pub fn spawn(&self, elf_data: &[u8]) -> Arc<TaskControlBlock> {
+        let new_task = Arc::new(TaskControlBlock::new(elf_data));
+        let mut inner = self.inner.exclusive_access();
+        inner.children.push(new_task.clone());
+        new_task
+    }
+
     pub fn getpid(&self) -> usize {
         self.pid.0
     }

@@ -19,7 +19,7 @@ OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 CHAPTER ?= 5
 TEST ?= $(CHAPTER)
-BASE ?= 1
+BASE ?= 2
 
 build: env $(KERNEL_BIN)
 
